@@ -21,7 +21,7 @@
 
 <iframe class="hide" name="hiddenFrame"></iframe>
 
-<form target="hiddenFrame">
+<form onreset="resetEstimation()" onsubmit="calculate()" target="hiddenFrame">
     <div>
         <label>
             <input checked name="sex" type="radio" value="m"/>
@@ -34,13 +34,13 @@
     </div>
     <div class="row">
         <div class="input-field col s12">
-            <input class="validate" id="age" type="number">
+            <input class="validate" id="age" max="17" min="3" required type="number">
             <label for="age">Возраст</label>
         </div>
     </div>
     <div class="row">
         <div class="input-field col s6">
-            <input class="validate" id="height" type="number">
+            <input class="validate" id="height" required type="number">
             <label for="height">Рост</label>
         </div>
         <div class="input-field col s6">
@@ -50,7 +50,7 @@
     </div>
     <div class="row">
         <div class="input-field col s6">
-            <input class="validate" id="weight" type="number">
+            <input class="validate" id="weight" required type="number">
             <label for="weight">Вес</label>
         </div>
         <div class="input-field col s6">
@@ -60,7 +60,7 @@
     </div>
     <div class="row">
         <div class="input-field col s6">
-            <input class="validate" id="chest" type="number">
+            <input class="validate" id="chest" required type="number">
             <label for="chest">Окружность груди</label>
         </div>
         <div class="input-field col s6">
@@ -69,7 +69,7 @@
         </div>
     </div>
     <div class="row">
-        <button class="waves-effect waves-light btn" onclick="calculate()" type="submit">Рассчитать</button>
+        <button class="waves-effect waves-light btn" type="submit">Рассчитать</button>
         <button class="waves-effect waves-light btn" type="reset">Очистить</button>
     </div>
     <div class="row">
@@ -82,14 +82,15 @@
 
     function calculate() {
         var requestParams = getRequsetParams();
-        var theUrl = webAppUrl + requestParams;
-        httpGetAsync(theUrl, setResult)
+        if (requestParams) {
+            var theUrl = webAppUrl + requestParams;
+            httpGetAsync(theUrl, setResult)
+        }
     }
 
     function setResult(responseText) {
         var estimation = JSON.parse(responseText);
 
-        // $('#result').text(estimation.result);
         var somatype = "Соматип по сумме центилей: " + estimation.result.estimationBySum;
 
         if (estimation.result.estimationByCentilesDifference.estimation) {
@@ -133,13 +134,17 @@
         var weight = document.getElementById("weight").value;
         var chest = document.getElementById("chest").value;
 
-        var requestParams = "?" +
-            "sex=" + sex + "&" +
-            "age=" + age + "&" +
-            "height=" + height + "&" +
-            "weight=" + weight + "&" +
-            "chest=" + chest;
-        return requestParams;
+        if (age && height && weight && chest) {
+            var requestParams = "?" +
+                "sex=" + sex + "&" +
+                "age=" + age + "&" +
+                "height=" + height + "&" +
+                "weight=" + weight + "&" +
+                "chest=" + chest;
+            return requestParams;
+        } else {
+            return false;
+        }
     }
 
     function httpGetAsync(theUrl, callback) {
@@ -150,6 +155,10 @@
         };
         xmlHttp.open("GET", theUrl, true); // true for asynchronous
         xmlHttp.send(null);
+    }
+
+    function resetEstimation() {
+        $('#result').html("");
     }
 </script>
 </body>
