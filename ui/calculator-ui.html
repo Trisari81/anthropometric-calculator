@@ -89,14 +89,43 @@
     }
 
     function setResult(responseText) {
-        var data = JSON.parse(responseText);
+        var estimation = JSON.parse(responseText);
 
-        $('#result').text(data.result);
-        $('#result').trigger('autoresize');
+        // $('#result').text(estimation.result);
+        var somatype = "Соматип по сумме центилей: " + estimation.result.estimationBySum;
 
-        $('#heightCentile').val(data.centiles.height);
-        $('#weightCentile').val(data.centiles.weight);
-        $('#chestCentile').val(data.centiles.chest);
+        if (estimation.result.estimationByCentilesDifference.estimation) {
+            var centileDiffText = "Развитие по разнице центилей: " + estimation.result.estimationByCentilesDifference.estimation;
+        }
+
+        var detailsText;
+
+        if (estimation.result.estimationByCentilesDifference.details) {
+            var details = estimation.result.estimationByCentilesDifference.details;
+            detailsText = "";
+            if (details.height) {
+                detailsText += " рост " + details.height + "<br>"
+            }
+            if (details.weight) {
+                detailsText += " вес " + details.weight + "<br>"
+            }
+            if (details.chest) {
+                detailsText += " окружность груди " + details.chest
+            }
+        }
+
+        var estimationText = somatype;
+        if (centileDiffText) {
+            estimationText += "<br>" + centileDiffText;
+        }
+        if (detailsText) {
+            estimationText += "<br>" + detailsText;
+        }
+        $('#result').html(estimationText);
+
+        $('#heightCentile').val(estimation.centiles.height);
+        $('#weightCentile').val(estimation.centiles.weight);
+        $('#chestCentile').val(estimation.centiles.chest);
     }
 
     function getRequsetParams() {

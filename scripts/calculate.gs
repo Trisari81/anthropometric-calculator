@@ -28,87 +28,6 @@ function doGet(e) {
     return ContentService.createTextOutput(JSON.stringify(response)).setMimeType(ContentService.MimeType.JSON);
 }
 
-function testFinal() {
-
-    Logger.log("TEST 1");
-    var centiles = calculateCentiles("m", 7, 119, 19, 56);
-    var result = combineEstimations(centiles);
-    Logger.log(result);
-    Logger.log("------------------");
-
-    Logger.log("TEST 2");
-    centiles = calculateCentiles("m", 7, 132, 27.7, 62);
-    result = combineEstimations(centiles);
-    Logger.log(result);
-    Logger.log("------------------");
-
-    Logger.log("TEST 3");
-    centiles = calculateCentiles("f", 8, 124.4, 25.5, 61);
-    result = combineEstimations(centiles);
-    Logger.log(result);
-    Logger.log("------------------");
-
-    Logger.log("TEST 4");
-    centiles = calculateCentiles("m", 8, 133, 33.8, 69);
-    result = combineEstimations(centiles);
-    Logger.log(result);
-    Logger.log("------------------");
-
-    Logger.log("TEST 5");
-    centiles = calculateCentiles("m", 9, 145, 35.1, 64);
-    result = combineEstimations(centiles);
-    Logger.log(result);
-    Logger.log("------------------");
-
-    Logger.log("TEST 6");
-    centiles = calculateCentiles("f", 10, 124, 24.5, 62);
-    result = combineEstimations(centiles);
-    Logger.log(result);
-    Logger.log("------------------");
-
-    Logger.log("TEST 7");
-    var centiles = calculateCentiles("f", 9, 124.4, 24, 59);
-    var result = combineEstimations(centiles);
-    Logger.log(result)
-    Logger.log("------------------");
-
-    Logger.log("TEST 8");
-    var centiles = calculateCentiles("f", 14, 170, 49, 74);
-    var result = combineEstimations(centiles);
-    Logger.log(result)
-    Logger.log("------------------");
-
-    Logger.log("TEST 9");
-    var centiles = calculateCentiles("f", 8, 135, 23.9, 58);
-    var result = combineEstimations(centiles);
-    Logger.log(result)
-    Logger.log("------------------");
-
-    Logger.log("TEST 10");
-    var centiles = calculateCentiles("m", 11, 135, 27.1, 61);
-    var result = combineEstimations(centiles);
-    Logger.log(result)
-    Logger.log("------------------");
-
-    Logger.log("TEST 11");
-    var centiles = calculateCentiles("m", 10, 141, 45.4, 72);
-    var result = combineEstimations(centiles);
-    Logger.log(result)
-    Logger.log("------------------");
-
-    Logger.log("TEST 12");
-    var centiles = calculateCentiles("m", 10, 151, 36.9, 68);
-    var result = combineEstimations(centiles);
-    Logger.log(result)
-    Logger.log("------------------");
-
-    Logger.log("TEST 13");
-    var centiles = calculateCentiles("m", 7, 132, 20, 62);
-    var result = combineEstimations(centiles);
-    Logger.log(result)
-    Logger.log("------------------");
-}
-
 function combineEstimations(centiles) {
     var result;
     var estimationBySum = calculateEstimationByCentileSum(centiles);
@@ -116,9 +35,19 @@ function combineEstimations(centiles) {
         var estimationByCentilesDifference = calculateEstimationByCentilesDifference(centiles);
     }
     if (estimationByCentilesDifference) {
-        result = estimationBySum.estimation + " " + estimationByCentilesDifference;
+        result = {
+            estimationBySum: estimationBySum.estimation,
+            estimationByCentilesDifference: estimationByCentilesDifference
+        };
     } else {
-        result = estimationBySum.estimation
+        var message = "ОШИБКА в расчете разницы центилей";
+        result = {
+            estimationBySum: estimationBySum.estimation,
+            estimationByCentilesDifference: message
+        };
+        Logger.log(message);
+        console.log(message);
+
     }
     return result;
 }
@@ -127,15 +56,35 @@ function calculateEstimationByCentilesDifference(centiles) {
 
     var estimationTable = getTable(ESTIMATION_BY_DIFFERENCE);
 
-    var estHeightWeight = estimationForTwoCentiles(centiles.height, centiles.weight, estimationTable, "вес");
-    var estHeightChest = estimationForTwoCentiles(centiles.height, centiles.chest, estimationTable, "окр.гр.");
+    var detailedEstimation = {
+        height: undefined,
+        weight: undefined,
+        chest: undefined
+    };
+
+    var estHeightWeight = estimationForTwoCentiles(
+        centiles.height,
+        centiles.weight,
+        estimationTable,
+        "weight",
+        detailedEstimation
+    );
+
+    var estHeightChest = estimationForTwoCentiles(
+        centiles.height,
+        centiles.chest,
+        estimationTable,
+        "chest",
+        detailedEstimation
+    );
+
+    if (!detailedEstimation.height && !detailedEstimation.weight && !detailedEstimation.chest) {
+        detailedEstimation = undefined
+    }
 
     var estimation = chooseEstimationFromAnswers(estHeightWeight, estHeightChest);
-    var addEstArray = collectAdditionalEstimation(estHeightWeight, estHeightChest);
 
-    estimation += " " + addEstArray;
-
-    return estimation;
+    return {estimation: estimation, details: detailedEstimation};
 
 }
 
@@ -165,42 +114,47 @@ function collectAdditionalEstimation(estHeightWeight, estHeightChest) {
     return addEstArray;
 }
 
-function estimationForTwoCentiles(height, second, estimationTable, secondName) {
+function estimationForTwoCentiles(height, second, estimationTable, secondName, detailedEstimation) {
     var diff = height - second;
 
-    for (var row = 0; row < estimationTable.length; row++) {
+    function estimationByDifference() {
+        for (var row = 0; row < estimationTable.length; row++) {
 
-        var estimation;
-        if (Math.abs(diff) == parseInt(estimationTable[row][0])) {
-            estimation = estimationTable[row][1]
-        }
-    }
-
-    var additionEstimation = [];
-
-    if (height > 6) {
-        additionEstimation.push("рост" + " избыток");
-    }
-
-    if (height < 3) {
-        additionEstimation.push("рост" + " недостаток");
-    }
-
-    if (Math.abs(diff) >= 3) {
-        if (diff > 0) {
-            if (height > 6) {
-                additionEstimation.push("рост" + " избыток");
+            var estimation;
+            if (Math.abs(diff) == parseInt(estimationTable[row][0])) {
+                estimation = estimationTable[row][1]
             }
-            additionEstimation.push(secondName + " недостаток");
-        } else {
-            if (height < 4) {
-                additionEstimation.push("рост" + " недостаток");
-            }
-            additionEstimation.push(secondName + " избыток");
         }
+        return estimation;
     }
 
-    return {estimation: estimation, additionEstimation: additionEstimation};
+    function estimateDetailedEstimation() {
+
+        if (height > 6) {
+            detailedEstimation.height = "избыток";
+        }
+
+        if (height < 3) {
+            detailedEstimation.height = "недостаток";
+        }
+
+        if (Math.abs(diff) >= 3) {
+            if (diff > 0) {
+                if (height > 6) {
+                    detailedEstimation.height = "избыток";
+                }
+                detailedEstimation[secondName] = "недостаток";
+            } else {
+                if (height < 4) {
+                    detailedEstimation.height = "недостаток";
+                }
+                detailedEstimation[secondName] = "избыток";
+            }
+        }
+        return detailedEstimation;
+    }
+
+    return {estimation: estimationByDifference(), additionEstimation: estimateDetailedEstimation()};
 }
 
 function calculateEstimationByCentileSum(centiles) {
@@ -230,7 +184,6 @@ function calculateEstimationByCentileSum(centiles) {
 
     return {estimation: "Ошибка", centileSum: centileSum};
 }
-
 
 function calculateCentiles(sex, age, height, weight, chest) {
     Logger.log("Start calculation Centiles for sex %s, age %s, height %s, wieght %s, chest %s", sex, age, height, weight, chest);
@@ -269,6 +222,7 @@ function calculateCentiles(sex, age, height, weight, chest) {
         chest: chestCentile
     };
 }
+
 
 function getCentile(age, value, table, tableName) {
     Logger.log("getCentile for age %s, tableName %s", age, tableName);
@@ -356,6 +310,87 @@ function printTable(rangeName) {
             }
         }
     }
+}
+
+function testFinal() {
+
+    Logger.log("TEST 1");
+    var centiles = calculateCentiles("m", 7, 119, 19, 56);
+    var result = combineEstimations(centiles);
+    Logger.log(result);
+    Logger.log("------------------");
+
+    Logger.log("TEST 2");
+    centiles = calculateCentiles("m", 7, 132, 27.7, 62);
+    result = combineEstimations(centiles);
+    Logger.log(result);
+    Logger.log("------------------");
+
+    Logger.log("TEST 3");
+    centiles = calculateCentiles("f", 8, 124.4, 25.5, 61);
+    result = combineEstimations(centiles);
+    Logger.log(result);
+    Logger.log("------------------");
+
+    Logger.log("TEST 4");
+    centiles = calculateCentiles("m", 8, 133, 33.8, 69);
+    result = combineEstimations(centiles);
+    Logger.log(result);
+    Logger.log("------------------");
+
+    Logger.log("TEST 5");
+    centiles = calculateCentiles("m", 9, 145, 35.1, 64);
+    result = combineEstimations(centiles);
+    Logger.log(result);
+    Logger.log("------------------");
+
+    Logger.log("TEST 6");
+    centiles = calculateCentiles("f", 10, 124, 24.5, 62);
+    result = combineEstimations(centiles);
+    Logger.log(result);
+    Logger.log("------------------");
+
+    Logger.log("TEST 7");
+    var centiles = calculateCentiles("f", 9, 124.4, 24, 59);
+    var result = combineEstimations(centiles);
+    Logger.log(result)
+    Logger.log("------------------");
+
+    Logger.log("TEST 8");
+    var centiles = calculateCentiles("f", 14, 170, 49, 74);
+    var result = combineEstimations(centiles);
+    Logger.log(result)
+    Logger.log("------------------");
+
+    Logger.log("TEST 9");
+    var centiles = calculateCentiles("f", 8, 135, 23.9, 58);
+    var result = combineEstimations(centiles);
+    Logger.log(result)
+    Logger.log("------------------");
+
+    Logger.log("TEST 10");
+    var centiles = calculateCentiles("m", 11, 135, 27.1, 61);
+    var result = combineEstimations(centiles);
+    Logger.log(result)
+    Logger.log("------------------");
+
+    Logger.log("TEST 11");
+    var centiles = calculateCentiles("m", 10, 141, 45.4, 72);
+    var result = combineEstimations(centiles);
+    Logger.log(result)
+    Logger.log("------------------");
+
+    Logger.log("TEST 12");
+    var centiles = calculateCentiles("m", 10, 151, 36.9, 68);
+    var result = combineEstimations(centiles);
+    Logger.log(result)
+    Logger.log("------------------");
+
+    Logger.log("TEST 13");
+    var centiles = calculateCentiles("m", 7, 132, 20, 62);
+    var result = combineEstimations(centiles);
+    Logger.log(result)
+    Logger.log("------------------");
 }
 
 function testPrintTable() {
