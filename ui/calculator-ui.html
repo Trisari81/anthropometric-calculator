@@ -39,11 +39,11 @@
         </div>
         <div class="input-field col s3">
             <input class="validate" id="month" max="11" min="0" required type="number" value="0">
-            <label for="age">Месяцев</label>
+            <label for="month">Месяцев</label>
         </div>
-        <div class="input-field col s6">
-            <input class="validate" id="mmyy" type="date">
-            <label for="age">ММ.ГГГ</label>
+        <div class="input-field col s3">
+            <input id="birthmmyy" name="birthmmyy" type="text"/>
+            <label for="birthmmyy">MM/ГГГГ рождения :</label>
         </div>
     </div>
     <div class="row">
@@ -168,6 +168,13 @@
     function resetEstimation() {
         $('#result').html("");
     }
+
+    var birthmmyy = document.getElementById('birthmmyy');
+    birthmmyy.addEventListener('keyup', function (e) { //Add event listener to every element
+        var reg = /[0-9]/;
+        if (this.value.length == 2 && reg.test(this.value)) this.value = this.value + "."; //Add colon if string length > 2 and string is a number
+        if (this.value.length > 7) this.value = this.value.substr(0, this.value.length - 1); //Delete the last digit if string length > 5
+    });
 </script>
 </body>
 </html>
