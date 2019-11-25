@@ -21,7 +21,7 @@
 
 <iframe class="hide" name="hiddenFrame"></iframe>
 
-<form onreset="resetEstimation()" onsubmit="calculate()" target="hiddenFrame">
+<form id="inputform" onsubmit="calculate()" target="hiddenFrame">
     <div>
         <label>
             <input checked name="sex" type="radio" value="m"/>
@@ -33,18 +33,26 @@
         </label>
     </div>
     <div class="row">
-        <div class="input-field col s3">
+        <div class="input-field col s3" onclick="disableSecondAgeInputOption()">
             <input class="validate" id="age" max="17" min="3" required type="number">
             <label for="age">Полных лет</label>
         </div>
-        <div class="input-field col s3">
-            <input class="validate" id="month" max="11" min="0" required type="number" value="0">
+
+        <div class="input-field col s3" onclick="disableSecondAgeInputOption()">
+            <input class="validate" id="month" max="11" min="0" type="number" value="0">
             <label for="month">Месяцев</label>
         </div>
-        <div class="input-field col s3">
-            <input id="birthmmyy" name="birthmmyy" type="text"/>
-            <label for="birthmmyy">MM/ГГГГ рождения :</label>
+        <div class="input-field col s6" onclick="disableFirstAgeInputOption()">
+            <input class="validate" id="birthmmyy" name="birthmmyy"
+                   pattern="(1[0-2]|0[1-9]|\d)\.(20\d\d)"
+                   required="required"
+                   type="text"
+                   value="01.2000"
+            />
+            <label for="birthmmyy">MM.ГГГГ рождения :</label>
         </div>
+
+
     </div>
     <div class="row">
         <div class="input-field col s6">
@@ -78,7 +86,7 @@
     </div>
     <div class="row">
         <button class="waves-effect waves-light btn" type="submit">Рассчитать</button>
-        <button class="waves-effect waves-light btn" type="reset">Очистить</button>
+        <button class="waves-effect waves-light btn" onclick="resetValues()" type="button">Очистить</button>
     </div>
     <div class="row">
         <p class="flow-text" id="result"></p>
@@ -86,13 +94,111 @@
 </form>
 
 <script type="text/javascript">
+
+    function disableFirstAgeInputOption() {
+        $('#birthmmyy')
+            .prop("disabled", false)
+            .prop("required", true)
+            .prop("class", "");
+
+        $('#age')
+            .prop("disabled", true)
+            .val("")
+            .prop("required", false)
+            .prop("class", "validate");
+        $('#month')
+            .prop("disabled", true)
+            .val("")
+            .prop("class", "validate");
+    }
+
+    function disableSecondAgeInputOption() {
+        $('#birthmmyy')
+            .prop("disabled", true)
+            .val("")
+            .prop("required", false)
+            .prop("class", "validate");
+
+        $('#age')
+            .prop("disabled", false)
+            .prop("required", true)
+            .prop("class", "");
+        $('#month')
+            .prop("disabled", false)
+            .prop("class", "");
+    }
+
+    //validation for the month-year input
+    document.addEventListener("DOMContentLoaded", function () {
+        var element = document.getElementById("birthmmyy");
+        element.oninvalid = function (e) {
+
+            if (!e.target.validity.valid) {
+                var startYear = new Date().getFullYear() - 18;
+                var currentYear = new Date().getFullYear() - 3;
+                e.target.setCustomValidity("Введите в формате ММ.ГГГГ года от " + startYear + " до " + currentYear);
+            }
+        };
+        element.oninput = function (e) {
+            e.target.setCustomValidity("");
+        };
+    });
+
+    //custom validattion for month-year input
+    birthmmyy.addEventListener('focusout', function (ev) {
+        var value = birthmmyy.value;
+        var mmyear = value.split('.');
+        var yearInt = parseInt(mmyear[1]);
+        if (yearInt < new Date().getFullYear() - 18 || yearInt > new Date().getFullYear()) {
+            birthmmyy.setCustomValidity("Invalid field.");
+            birthmmyy.checkValidity();
+        }
+    });
+
+    //the Google Apps Script url
     var webAppUrl = 'https://script.google.com/macros/s/AKfycby4FctT7k_pAaxEjRcZroAO-T13tJIt4naryF_UErpeCno5Clg/exec';
 
     function calculate() {
+        $('#result').html("");
         var requestParams = getRequsetParams();
         if (requestParams) {
             var theUrl = webAppUrl + requestParams;
             httpGetAsync(theUrl, setResult)
+        }
+    }
+
+    function getRequsetParams() {
+        var sex = document.querySelector('input[name="sex"]:checked').value;
+        var age = document.getElementById("age").value;
+        var month = document.getElementById("month").value;
+        var birthmmyy = document.getElementById("birthmmyy").value;
+        var height = document.getElementById("height").value;
+        var weight = document.getElementById("weight").value;
+        var chest = document.getElementById("chest").value;
+
+        if (age && height && weight && chest) {
+            if (month == "" || month == undefined) {
+                month = 0;
+            }
+            return "?" +
+                "sex=" + sex + "&" +
+                "age=" + age + "&" +
+                "month=" + month + "&" +
+                "height=" + height + "&" +
+                "weight=" + weight + "&" +
+                "chest=" + chest;
+        } else if (birthmmyy && height && weight && chest) {
+            var mmyy = birthmmyy.split('.');
+            var monthDff = monthDiff(new Date(mmyy[1], mmyy[0] - 1, 1), new Date());
+            return "?" +
+                "sex=" + sex + "&" +
+                "age=" + ((monthDff / 12) >> 0) + "&" +
+                "month=" + monthDff % 12 + "&" +
+                "height=" + height + "&" +
+                "weight=" + weight + "&" +
+                "chest=" + chest;
+        } else {
+            return false
         }
     }
 
@@ -102,7 +208,7 @@
         var somatype = "Соматип по сумме центилей: " + estimation.result.estimationBySum;
 
         if (estimation.result.estimationByCentilesDifference.estimation) {
-            var centileDiffText = "Развитие по разнице центилей: " + estimation.result.estimationByCentilesDifference.estimation;
+            var centileDiffText = "Развитие по разнице центилей: " + estimation.result.estimationByCentilesDifference.estimation.estimation;
         }
 
         var detailsText;
@@ -135,26 +241,6 @@
         $('#chestCentile').val(estimation.centiles.chest);
     }
 
-    function getRequsetParams() {
-        var sex = document.querySelector('input[name="sex"]:checked').value;
-        var age = document.getElementById("age").value;
-        var height = document.getElementById("height").value;
-        var weight = document.getElementById("weight").value;
-        var chest = document.getElementById("chest").value;
-
-        if (age && height && weight && chest) {
-            var requestParams = "?" +
-                "sex=" + sex + "&" +
-                "age=" + age + "&" +
-                "height=" + height + "&" +
-                "weight=" + weight + "&" +
-                "chest=" + chest;
-            return requestParams;
-        } else {
-            return false;
-        }
-    }
-
     function httpGetAsync(theUrl, callback) {
         var xmlHttp = new XMLHttpRequest();
         xmlHttp.onreadystatechange = function () {
@@ -165,16 +251,34 @@
         xmlHttp.send(null);
     }
 
-    function resetEstimation() {
+    function resetValues() {
         $('#result').html("");
+
+        $('#age').val("");
+        $('#month').val("");
+
+        $('#height').val("");
+        $('#heightCentile').val("");
+
+        $('#weight').val("");
+        $('#weightCentile').val("");
+
+        $('#chest').val("");
+        $('#chestCentile').val("");
+
+        $('#birthmmyy').val("");
+
+        $('#birthmmyy').focus();
+
     }
 
-    var birthmmyy = document.getElementById('birthmmyy');
-    birthmmyy.addEventListener('keyup', function (e) { //Add event listener to every element
-        var reg = /[0-9]/;
-        if (this.value.length == 2 && reg.test(this.value)) this.value = this.value + "."; //Add colon if string length > 2 and string is a number
-        if (this.value.length > 7) this.value = this.value.substr(0, this.value.length - 1); //Delete the last digit if string length > 5
-    });
+    function monthDiff(d1, d2) {
+        var months;
+        months = (d2.getFullYear() - d1.getFullYear()) * 12;
+        months -= d1.getMonth() + 1;
+        months += d2.getMonth();
+        return months <= 0 ? 0 : months;
+    }
 </script>
 </body>
 </html>

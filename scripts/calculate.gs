@@ -15,10 +15,10 @@ function doGet(e) {
 
     var sex = e.parameter.sex;
     var age = parseInt(e.parameter.age);
-    var month = 0;
-    var height = parseInt(e.parameter.height);
-    var weight = parseInt(e.parameter.weight);
-    var chest = parseInt(e.parameter.chest);
+    var month = parseInt(e.parameter.month);
+    var height = parseFloat(e.parameter.height);
+    var weight = parseFloat(e.parameter.weight);
+    var chest = parseFloat(e.parameter.chest);
 
     var centiles = calculateCentiles(sex, age, month, height, weight, chest);
     var result = combineEstimations(centiles);
@@ -98,7 +98,7 @@ function chooseEstimationFromAnswers(estHeightWeight, estHeightChest) {
 }
 
 function estimationForTwoCentiles(height, second, estimationTable, secondName, detailedEstimation) {
-    var diff = Math.abs(height - second);
+    var diff = height - second;
 
     function estimationByDifference() {
         for (var row = 0; row < estimationTable.length; row++) {
@@ -137,7 +137,11 @@ function estimationForTwoCentiles(height, second, estimationTable, secondName, d
         return detailedEstimation;
     }
 
-    return {estimation: estimationByDifference(), additionEstimation: estimateDetailedEstimation(), diff: diff};
+    return {
+        estimation: estimationByDifference(),
+        additionEstimation: estimateDetailedEstimation(),
+        diff: Math.abs(diff)
+    };
 }
 
 function calculateEstimationByCentileSum(centiles) {
@@ -168,8 +172,8 @@ function calculateEstimationByCentileSum(centiles) {
 }
 
 function calculateCentiles(sex, age, month, height, weight, chest) {
-    Logger.log("Start calculation Centiles for sex %s, age %s, height %s, wieght %s, chest %s", sex, age, height, weight, chest);
-    console.log("Start calculation Centiles for sex %s, age %s, height %s, wieght %s, chest %s", sex, age, height, weight, chest);
+    Logger.log("Start calculation Centiles for sex %s, age %s, months %s, height %s, weight %s, chest %s", sex, age, month, height, weight, chest);
+    console.log("Start calculation Centiles for sex %s, age %s, months %s, height %s, weight %s, chest %s", sex, age, month, height, weight, chest);
     var heightTable;
     var weightTable;
     var chestTable;
@@ -200,9 +204,9 @@ function calculateCentiles(sex, age, month, height, weight, chest) {
         chestTable = reformatCentileTable(chestTable);
     }
 
-    var heightCentile = getCentile(age, 0, height, heightTable, "height");
-    var weightCentile = getCentile(age, 0, weight, weightTable, "weight");
-    var chestCentile = getCentile(age, 0, chest, chestTable, "chest");
+    var heightCentile = getCentile(age, month, height, heightTable, "height");
+    var weightCentile = getCentile(age, month, weight, weightTable, "weight");
+    var chestCentile = getCentile(age, month, chest, chestTable, "chest");
 
     return {
         height: heightCentile,
@@ -230,7 +234,12 @@ function getCentile(age, month, value, table, tableName) {
     if (validateTable(table)) {
         var centile;
         var yymm = [age, month];
-        var row = table[yymm];
+        var closestYearMonthInTable = findClosestYearMonthInTable(yymm, table);
+
+        var row = table[closestYearMonthInTable[1]];
+        var closestYYMM = closestYearMonthInTable[1].split(',');
+        Logger.log("found closest age %s, month %s, row %s", closestYYMM[0], closestYYMM[1], row);
+        console.log("found closest age %s, month %s, row %s", closestYYMM[0], closestYYMM[1], row);
         if (value < row[0]) {
             centile = 1;
         }
@@ -246,6 +255,26 @@ function getCentile(age, month, value, table, tableName) {
             }
         }
     }
+}
+
+function findClosestYearMonthInTable(yearMonthInput, table) {
+    var inputInMonths = yearMonthInput[0] * 12 + yearMonthInput[1];
+    var firstProperty = Object.keys(table)[0];
+    return Object.keys(table).reduce(function (min, key) {
+        var keyArray = key.split(',');
+        var currentDateInMonths = parseInt(keyArray[0] * 12) + parseInt(keyArray[1]);
+
+        var minArray = min[1].split(',');
+        var minDateInMonths = parseInt(minArray[0] * 12) + parseInt(minArray[1]);
+
+        var diffForCurernt = Math.abs(currentDateInMonths - inputInMonths);
+        var diffForMin = Math.abs(minDateInMonths - inputInMonths)
+        if (diffForCurernt <= diffForMin) {
+            return [diffForCurernt, key];
+        } else {
+            return min;
+        }
+    }, [1000, firstProperty]);
 }
 
 function validateTable(table) {
@@ -308,10 +337,10 @@ function printTable(rangeName) {
     }
 }
 
-function TEST1() {
+function TEST14() {
 
-    Logger.log("TEST 1");
-    var centiles = calculateCentiles("m", 7, 0, 119, 19, 56);
+    Logger.log("TEST 14");
+    var centiles = calculateCentiles("m", 18, 9, 120, 30, 60);
     var result = combineEstimations(centiles);
     Logger.log(result);
     Logger.log("------------------");
@@ -478,4 +507,13 @@ function testReformatTable() {
     heightTable = reformatCentileTable(heightTable);
 
     Logger.log(heightTable);
+}
+
+function TEST() {
+
+    Logger.log("TEST ");
+    var centiles = calculateCentiles("f", 10, 0, 124, 24.5, 62);
+    var result = combineEstimations(centiles);
+    Logger.log(result);
+    Logger.log("------------------");
 }
