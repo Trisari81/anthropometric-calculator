@@ -149,7 +149,7 @@
         var value = birthmmyy.value;
         var mmyear = value.split('.');
         var yearInt = parseInt(mmyear[1]);
-        if (yearInt < new Date().getFullYear() - 18 || yearInt > new Date().getFullYear()) {
+        if (yearInt < new Date().getFullYear() - 18 || yearInt > new Date().getFullYear() - 3) {
             birthmmyy.setCustomValidity("Invalid field.");
             birthmmyy.checkValidity();
         }
