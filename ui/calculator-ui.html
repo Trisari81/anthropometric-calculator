@@ -22,15 +22,29 @@
 <iframe class="hide" name="hiddenFrame"></iframe>
 
 <form id="inputform" onsubmit="calculate()" target="hiddenFrame">
-    <div>
-        <label>
-            <input checked name="sex" type="radio" value="m"/>
-            <span>Мальчик</span>
-        </label>
-        <label>
-            <input name="sex" type="radio" value="f"/>
-            <span>Девочка</span>
-        </label>
+    <div class="row">
+        <div class="input-field col s6">
+            <div>
+                <label>
+                    <input checked name="sex" type="radio" value="m"/>
+                    <span>Мальчик</span>
+                </label>
+            </div>
+            <div>
+                <label>
+                    <input name="sex" type="radio" value="f"/>
+                    <span>Девочка</span>
+                </label>
+            </div>
+        </div>
+        <div class="input-field col s6">
+            <input id="measureDate" name="measureDate"
+                   pattern="(1[0-2]|0[1-9]|\d)\.(20\d\d)"
+                   required="required"
+                   type="text"
+            />
+            <label for="birthmmyy">MM.ГГГГ измерения :</label>
+        </div>
     </div>
     <div class="row">
         <div class="input-field col s3" onclick="disableSecondAgeInputOption()">
@@ -45,7 +59,6 @@
         <div class="input-field col s6" onclick="disableFirstAgeInputOption()">
             <input class="validate" id="birthmmyy" name="birthmmyy"
                    pattern="(1[0-2]|0[1-9]|\d)\.(20\d\d)"
-                   required="required"
                    type="text"
                    value="01.2000"
             />
@@ -95,6 +108,17 @@
 
 <script type="text/javascript">
 
+    setMeasureDate();
+
+    //add current month and year into measure date
+    function setMeasureDate() {
+        var measureDate = document.getElementById("measureDate");
+        var currentDate = new Date();
+        var currentYear = currentDate.getFullYear();
+        var currentMonth = currentDate.getMonth() + 1;
+        measureDate.value = currentMonth + "." + currentYear;
+    }
+
     function disableFirstAgeInputOption() {
         $('#birthmmyy')
             .prop("disabled", false)
@@ -135,8 +159,8 @@
 
             if (!e.target.validity.valid) {
                 var startYear = new Date().getFullYear() - 18;
-                var currentYear = new Date().getFullYear() - 3;
-                e.target.setCustomValidity("Введите в формате ММ.ГГГГ года от " + startYear + " до " + currentYear);
+                var lastAllowedYear = new Date().getFullYear() - 3;
+                e.target.setCustomValidity("Введите в формате ММ.ГГГГ года от " + startYear + " до " + lastAllowedYear);
             }
         };
         element.oninput = function (e) {
@@ -188,8 +212,11 @@
                 "weight=" + weight + "&" +
                 "chest=" + chest;
         } else if (birthmmyy && height && weight && chest) {
+            var measureMMYYValue = document.getElementById("measureDate").value;
+            var measureMMYY = measureMMYYValue.split('.');
+
             var mmyy = birthmmyy.split('.');
-            var monthDff = monthDiff(new Date(mmyy[1], mmyy[0] - 1, 1), new Date());
+            var monthDff = monthDiff(new Date(mmyy[1], mmyy[0] - 1), new Date(measureMMYY[1], measureMMYY[0] - 1));
             return "?" +
                 "sex=" + sex + "&" +
                 "age=" + ((monthDff / 12) >> 0) + "&" +
